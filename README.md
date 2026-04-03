@@ -1,4 +1,4 @@
-# Chat Table of Contents — Chrome Extension
+# PromptMap — Chrome Extension
 
 A Manifest V3 Chrome extension that adds a **Table of Contents** panel to
 ChatGPT, Claude, and Gemini. Click the extension icon to see every prompt
