@@ -293,12 +293,3 @@ html, body {
   flex-shrink: 0;
   transition: transform 0.2s ease;
 }
-
-/* ── Loading hint text ──────────────────────────────────────── */
-.loading-hint {
-  font-size: 11.5px;
-  color: var(--text-dim);
-  text-align: center;
-  font-family: var(--font-mono);
-  margin-top: 4px;
-}
