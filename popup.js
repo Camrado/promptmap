@@ -1,5 +1,5 @@
 // ============================================================
-//  Chat Table of Contents — popup.js
+//  PromptMap — popup.js
 // ============================================================
 
 (function () {
@@ -9,10 +9,15 @@
   const platformLabel = document.getElementById("platform-label");
   const countBadge    = document.getElementById("count-badge");
 
-  function renderLoader() {
+  // ── UI states ────────────────────────────────────────────────
+
+  function renderLoader(msg) {
     body.innerHTML = `
-      <div class="loader">
-        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <div class="state-box">
+        <div class="loader">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+        <div class="state-desc loading-hint">${msg || "Scanning conversation…"}</div>
       </div>`;
   }
 
@@ -52,7 +57,7 @@
       const li = document.createElement("li");
       li.className = "msg-item";
       li.dataset.id = id;
-      li.style.animationDelay = `${i * 30}ms`;
+      li.style.animationDelay = `${i * 20}ms`;
 
       li.innerHTML = `
         <span class="msg-num">${i + 1}</span>
@@ -68,22 +73,19 @@
             </button>` : ''}
         </div>`;
 
-      // Click on text / number → scroll to message
       li.querySelector('.msg-num').addEventListener('click', () => scrollTo(id));
       li.querySelector('.msg-text').addEventListener('click', () => scrollTo(id));
       li.querySelector('.msg-full')?.addEventListener('click', () => scrollTo(id));
 
-      // Expand button toggles full text
       const expandBtn = li.querySelector('.expand-btn');
       if (expandBtn) {
         expandBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const fullEl   = li.querySelector('.msg-full');
-          const shortEl  = li.querySelector('.msg-text');
-          const label    = expandBtn.querySelector('.expand-label');
-          const arrow    = expandBtn.querySelector('svg');
+          const fullEl  = li.querySelector('.msg-full');
+          const shortEl = li.querySelector('.msg-text');
+          const label   = expandBtn.querySelector('.expand-label');
+          const arrow   = expandBtn.querySelector('svg');
           const expanded = !fullEl.classList.contains('hidden');
-
           if (expanded) {
             fullEl.classList.add('hidden');
             shortEl.classList.remove('hidden');
@@ -110,6 +112,8 @@
     body.parentElement.appendChild(footer);
   }
 
+  // ── Actions ──────────────────────────────────────────────────
+
   function scrollTo(id) {
     chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
       if (!tab) return;
@@ -119,7 +123,7 @@
 
   function ensureContentScript(tabId, callback) {
     chrome.scripting.executeScript(
-      { target: { tabId }, func: () => typeof window.__chatTocInjected !== "undefined" },
+      { target: { tabId }, func: () => typeof window.__promptmapInjected !== "undefined" },
       (results) => {
         if (results?.[0]?.result === true) { callback(); return; }
         chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }, () => callback());
@@ -127,8 +131,11 @@
     );
   }
 
+  // ── Init ─────────────────────────────────────────────────────
+
   function init() {
-    renderLoader();
+    renderLoader("Scanning conversation…");
+
     chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
       if (!tab) { renderState("⚠️", "No active tab", "Could not access the current tab.", false); return; }
 
@@ -141,6 +148,9 @@
         renderState("🔍", "Not an AI chat page", "Open this on ChatGPT, Claude, or Gemini.", false);
         return;
       }
+
+      // Show a more informative message while we scroll-load
+      renderLoader("Scrolling to load all messages…");
 
       ensureContentScript(tab.id, () => {
         chrome.tabs.sendMessage(tab.id, { action: "getMessages" }, (response) => {
@@ -159,9 +169,9 @@
 
           if (!response.messages?.length) {
             const desc = isClaude
-              ? "No prompts detected. Make sure the conversation has loaded fully, then try again."
+              ? "No prompts detected. Make sure the conversation has loaded, then try again."
               : "Send your first message in the chat, then reopen this panel.";
-            renderState("💬", "No messages found", desc, isClaude);
+            renderState("💬", "No messages found", desc, true);
             return;
           }
 
